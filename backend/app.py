@@ -41,7 +41,7 @@ class PriceScraper:
             if response.status_code != 200:
                 return None
                 
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html5lib')
             
             # Look for product cards
             products = []
@@ -91,7 +91,7 @@ class PriceScraper:
             if response.status_code != 200:
                 return None
                 
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html5lib')
             
             products = []
             product_cards = soup.find_all('div', class_=re.compile(r'product|item'))
@@ -139,7 +139,7 @@ class PriceScraper:
             if response.status_code != 200:
                 return None
                 
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.content, 'html5lib')
             
             products = []
             product_cards = soup.find_all('div', class_=re.compile(r'product|item'))
