@@ -7,6 +7,8 @@ import json
 from datetime import datetime
 import time
 import os
+import random
+from urllib.parse import quote_plus
 
 app = Flask(__name__)
 CORS(app)
@@ -15,7 +17,17 @@ class PriceScraper:
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0'
         })
     
     def get_exchange_rate(self):
@@ -31,52 +43,126 @@ class PriceScraper:
             return 0.0183
         return 0.0183
     
+    def make_request_with_retry(self, url, max_retries=3, delay=1):
+        """Make HTTP request with retry logic and rate limiting"""
+        for attempt in range(max_retries):
+            try:
+                # Add random delay to avoid rate limiting
+                time.sleep(random.uniform(0.5, 2.0))
+                
+                response = self.session.get(url, timeout=15)
+                if response.status_code == 200:
+                    return response
+                elif response.status_code == 429:  # Rate limited
+                    wait_time = delay * (2 ** attempt)
+                    print(f"Rate limited, waiting {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"HTTP {response.status_code} for {url}")
+                    
+            except requests.exceptions.RequestException as e:
+                print(f"Request failed (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(delay * (2 ** attempt))
+                    
+        return None
+    
     def search_sephora_au(self, product_name):
         """Search Sephora Australia for products"""
         try:
-            # Sephora AU search URL
-            search_url = f"https://www.sephora.com.au/search?keyword={product_name.replace(' ', '%20')}"
-            response = self.session.get(search_url, timeout=10)
+            # Try multiple search strategies
+            search_terms = [
+                product_name,
+                product_name.replace(' ', '+'),
+                quote_plus(product_name)
+            ]
             
-            if response.status_code != 200:
-                return None
+            for search_term in search_terms:
+                search_url = f"https://www.sephora.com.au/search?keyword={search_term}"
+                response = self.make_request_with_retry(search_url)
                 
-            soup = BeautifulSoup(response.content, 'html5lib')
-            
-            # Look for product cards
-            products = []
-            product_cards = soup.find_all('div', class_=re.compile(r'product|item'))
-            
-            for card in product_cards[:3]:  # Limit to first 3 results
-                try:
-                    # Extract product information
-                    name_elem = card.find(['h3', 'h4', 'a'], class_=re.compile(r'title|name|product'))
-                    price_elem = card.find(['span', 'div'], class_=re.compile(r'price|cost'))
-                    link_elem = card.find('a', href=True)
-                    img_elem = card.find('img')
-                    
-                    if name_elem and price_elem:
-                        name = name_elem.get_text(strip=True)
-                        price_text = price_elem.get_text(strip=True)
-                        
-                        # Extract numeric price
-                        price_match = re.search(r'[\d,]+\.?\d*', price_text.replace('$', '').replace(',', ''))
-                        if price_match:
-                            price = float(price_match.group())
-                            
-                            product = {
-                                'name': name,
-                                'price': price,
-                                'currency': 'AUD',
-                                'url': f"https://www.sephora.com.au{link_elem['href']}" if link_elem else search_url,
-                                'image': img_elem['src'] if img_elem and img_elem.get('src') else None,
-                                'in_stock': 'out of stock' not in price_text.lower()
-                            }
-                            products.append(product)
-                except Exception as e:
+                if not response:
                     continue
+                    
+                soup = BeautifulSoup(response.content, 'html5lib')
+                
+                # Look for product cards with multiple selectors
+                product_selectors = [
+                    'div[data-testid*="product"]',
+                    'div[class*="product"]',
+                    'div[class*="item"]',
+                    'article',
+                    '.product-card',
+                    '.product-item'
+                ]
+                
+                products = []
+                for selector in product_selectors:
+                    product_cards = soup.select(selector)
+                    if product_cards:
+                        break
+                
+                for card in product_cards[:3]:  # Limit to first 3 results
+                    try:
+                        # Try multiple selectors for product info
+                        name_selectors = ['h3', 'h4', 'a[data-testid*="product"]', '[class*="title"]', '[class*="name"]']
+                        price_selectors = ['[class*="price"]', '[class*="cost"]', '[data-testid*="price"]']
+                        
+                        name_elem = None
+                        for selector in name_selectors:
+                            name_elem = card.select_one(selector)
+                            if name_elem:
+                                break
+                        
+                        price_elem = None
+                        for selector in price_selectors:
+                            price_elem = card.select_one(selector)
+                            if price_elem:
+                                break
+                        
+                        if name_elem and price_elem:
+                            name = name_elem.get_text(strip=True)
+                            price_text = price_elem.get_text(strip=True)
+                            
+                            # Extract numeric price with better regex
+                            price_match = re.search(r'[\d,]+\.?\d*', price_text.replace('$', '').replace(',', ''))
+                            if price_match:
+                                price = float(price_match.group())
+                                
+                                # Get product URL
+                                link_elem = card.find('a', href=True)
+                                product_url = f"https://www.sephora.com.au{link_elem['href']}" if link_elem else search_url
+                                
+                                # Get product image
+                                img_elem = card.find('img')
+                                image_url = None
+                                if img_elem:
+                                    image_url = img_elem.get('src') or img_elem.get('data-src')
+                                    if image_url and not image_url.startswith('http'):
+                                        image_url = f"https://www.sephora.com.au{image_url}"
+                                
+                                product = {
+                                    'name': name,
+                                    'price': price,
+                                    'currency': 'AUD',
+                                    'url': product_url,
+                                    'image': image_url,
+                                    'in_stock': 'out of stock' not in price_text.lower() and 'sold out' not in price_text.lower()
+                                }
+                                products.append(product)
+                                
+                                # Return first valid product
+                                if products:
+                                    return products[0]
+                    except Exception as e:
+                        print(f"Error parsing product card: {e}")
+                        continue
+                
+                # If we found products, return the first one
+                if products:
+                    return products[0]
             
-            return products[0] if products else None
+            return None
             
         except Exception as e:
             print(f"Error searching Sephora AU: {e}")
