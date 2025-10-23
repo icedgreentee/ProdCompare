@@ -1,18 +1,19 @@
 import React from 'react';
 
 const ProductCard = ({ product, isCheapest }) => {
-  const getStoreColor = (store) => {
-    switch (store) {
-      case 'Sephora AU':
-        return 'border-sephora-pink bg-pink-50';
-      case 'Sephora IN':
-        return 'border-purple-500 bg-purple-50';
-      case 'Nykaa':
-        return 'border-nykaa-pink bg-pink-50';
-      default:
-        return 'border-gray-300 bg-gray-50';
-    }
-  };
+  // Store color mapping (currently unused but kept for future use)
+  // const getStoreColor = (store) => {
+  //   switch (store) {
+  //     case 'Sephora AU':
+  //       return 'border-sephora-pink bg-pink-50';
+  //     case 'Sephora IN':
+  //       return 'border-purple-500 bg-purple-50';
+  //     case 'Nykaa':
+  //       return 'border-nykaa-pink bg-pink-50';
+  //     default:
+  //       return 'border-gray-300 bg-gray-50';
+  //   }
+  // };
 
   const getStoreLogo = (store) => {
     switch (store) {

@@ -23,20 +23,20 @@ const Footer = () => {
           </div>
           
           <div className="mt-4 flex justify-center space-x-6">
-            <a 
-              href="#" 
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
+            <button 
+              className="text-gray-400 hover:text-gray-600 transition-colors text-sm cursor-pointer"
             >
               About
-            </a>
-            <a 
-              href="#" 
-              className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
+            </button>
+            <button 
+              className="text-gray-400 hover:text-gray-600 transition-colors text-sm cursor-pointer"
             >
               Privacy
-            </a>
+            </button>
             <a 
-              href="#" 
+              href="https://github.com/icedgreentee/ProdCompare" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
             >
               GitHub
