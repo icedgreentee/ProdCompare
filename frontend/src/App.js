@@ -9,7 +9,7 @@ import ExchangeRateInfo from './components/ExchangeRateInfo';
 import ComparisonSummary from './components/ComparisonSummary';
 import Footer from './components/Footer';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://your-backend-url.herokuapp.com';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://prodcompare-production.up.railway.app';
 
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
