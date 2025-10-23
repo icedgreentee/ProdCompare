@@ -1,0 +1,31 @@
+{
+  "name": "beauty-price-comparison",
+  "version": "1.0.0",
+  "description": "Compare beauty product prices across Sephora Australia, Sephora India, and Nykaa",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"cd backend && python app.py\" \"cd frontend && npm start\"",
+    "build": "cd frontend && npm run build",
+    "install-all": "cd frontend && npm install && cd ../backend && pip install -r requirements.txt",
+    "start-backend": "cd backend && python app.py",
+    "start-frontend": "cd frontend && npm start"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/icedgreentee/ProdCompare.git"
+  },
+  "keywords": [
+    "beauty",
+    "price-comparison",
+    "sephora",
+    "nykaa",
+    "react",
+    "flask",
+    "scraping"
+  ],
+  "author": "Teemishra",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
